@@ -1,0 +1,235 @@
+
+2024-06-12T20:18:47.886811
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: Structure
+1 app/
+2 app/__init__.py
+3 app/main.py
+4 app/models/
+5 app/models/__init__.py
+6 app/models/user.py
+7 app/models/team.py
+8 app/routers/
+9 app/routers/__init__.py
+10 app/routers/users.py
+11 app/routers/teams.py
+12 app/utils/
+13 app/utils/__init__.py
+14 app/utils/auth.py
+15 app/utils/db.py
+16 requirements.txt
+17 .gitignore
+
+```
+
+================================== Ai Message ==================================
+
+Here is the Unix script that installs dependencies and runs the codebase:
+```
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the codebase
+python -m app.main
+```
+Save this script to a file (e.g. `run.sh`), make it executable with `chmod +x run.sh`, and then run it with `./run.sh`.
+
+2024-06-12T20:19:50.677797
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: Structure
+1 app/
+2 app/
+3 __init__.py
+4 main.py
+5 models/
+6 __init__.py
+7 user.py
+8 team.py
+9 schemas/
+10 __init__.py
+11 user.py
+12 team.py
+13 routers/
+14 __init__.py
+15 user.py
+16 team.py
+17 database.py
+18 requirements.txt
+19 .gitignore
+
+File: app/__init__.py
+1 # empty file
+
+File: app/main.py
+1 from fastapi import FastAPI
+2 from routers.user import router as user_router
+3 from routers.team import router as team_router
+4 
+5 app = FastAPI()
+6 
+7 app.include_router(user_router)
+8 app.include_router(team_router)
+
+File: app/models/user.py
+1 from sqlalchemy import Column, Integer, String
+2 from sqlalchemy.ext.declarative import declarative_base
+3 
+4 Base = declarative_base()
+5 
+6 class User(Base):
+7     __tablename__ = 'users'
+8     id = Column(Integer, primary_key=True)
+9     username = Column(String, unique=True)
+10     password = Column(String)
+11     profile = Column(String)
+12     team_id = Column(Integer)
+
+File: app/models/team.py
+1 from sqlalchemy import Column, Integer, String
+2 from sqlalchemy.ext.declarative import declarative_base
+3 
+4 Base = declarative_base()
+5 
+6 class Team(Base):
+7     __tablename__ = 'teams'
+8     id = Column(Integer, primary_key=True)
+9     name = Column(String, unique=True)
+
+File: app/schemas/user.py
+1 from pydantic import BaseModel
+2 
+3 class UserSchema(BaseModel):
+4     username: str
+5     password: str
+6     profile: str
+7     team_id: int
+
+File: app/schemas/team.py
+1 from pydantic import BaseModel
+2 
+3 class TeamSchema(BaseModel):
+4     name: str
+
+File: app/routers/user.py
+1 from fastapi import APIRouter, HTTPException
+2 from sqlalchemy.orm import Session
+3 from app.models.user import User
+4 from app.schemas.user import UserSchema
+5 
+6 router = APIRouter()
+7 
+8 @router.post("/register")
+9 async def register_user(user: UserSchema, db: Session = Depends()):
+10     existing_user = db.query(User).filter_by(username=user.username).first()
+11     if existing_user:
+12         raise HTTPException(status_code=400, detail="Username already exists")
+13     new_user = User(username=user.username, password=user.password, profile=user.profile, team_id=user.team_id)
+14     db.add(new_user)
+15     db.commit()
+16     return {"message": "User created successfully"}
+17 
+18 @router.get("/users")
+19 async def get_users(db: Session = Depends()):
+20     users = db.query(User).all()
+21     return [{"id": user.id, "username": user.username, "profile": user.profile} for user in users]
+
+File: app/routers/team.py
+1 from fastapi import APIRouter, HTTPException
+2 from sqlalchemy.orm import Session
+3 from app.models.team import Team
+4 from app.schemas.team import TeamSchema
+5 
+6 router = APIRouter()
+7 
+8 @router.post("/teams")
+9 async def create_team(team: TeamSchema, db: Session = Depends()):
+10     existing_team = db.query(Team).filter_by(name=team.name).first()
+11     if existing_team:
+12         raise HTTPException(status_code=400, detail="Team already exists")
+13     new_team = Team(name=team.name)
+14     db.add(new_team)
+15     db.commit()
+16     return {"message": "Team created successfully"}
+17 
+18 @router.get("/teams")
+19 async def get_teams(db: Session = Depends()):
+20     teams = db.query(Team).all()
+21     return [{"id": team.id, "name": team.name} for team in teams]
+
+File: app/database.py
+1 from sqlalchemy import create_engine
+2 from sqlalchemy.orm import sessionmaker
+3 
+4 SQLALCHEMY_DATABASE_URL = "sqlite:///app.db"
+5 engine = create_engine(SQLALCHEMY_DATABASE_URL)
+6 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+7 
+8 def get_db():
+9     db = SessionLocal()
+10     try:
+11         yield db
+12     finally:
+13         db.close()
+
+File: requirements.txt
+1 fastapi
+2 sqlalchemy
+3 pydantic
+
+File: .gitignore
+1 app.db
+
+```
+
+================================== Ai Message ==================================
+
+Here is the Unix script that installs dependencies and runs the codebase:
+```
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
